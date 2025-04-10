@@ -1,0 +1,130 @@
+<!DOCTYPE html><html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>نظام تسجيل الحضور بالبصمة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      text-align: center;
+      padding: 50px;
+    }
+    .card {
+      background-color: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+      max-width: 400px;
+      margin: auto;
+      margin-bottom: 40px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    table {
+      margin: auto;
+      width: 90%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    th {
+      background-color: #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>تسجيل الحضور</h2>
+    <input type="text" id="employeeName" placeholder="ادخل اسم الموظف" style="padding:10px; width:90%; border-radius:8px; margin-bottom:15px;">
+    <br>
+    <button onclick="authenticateFingerprint()">تسجيل البصمة</button>
+    <div id="status"></div>
+  </div>  <div class="card">
+    <h2>تسجيل موظف جديد</h2>
+    <input type="text" id="newEmployee" placeholder="اسم الموظف الجديد" style="padding:10px; width:90%; border-radius:8px; margin-bottom:15px;">
+    <br>
+    <button onclick="registerEmployee()">تسجيل الموظف</button>
+    <div id="registerStatus"></div>
+  </div>  <div class="card">
+    <h2>لوحة الإدارة - الحضور</h2>
+    <table>
+      <thead>
+        <tr><th>الموظف</th><th>الوقت</th></tr>
+      </thead>
+      <tbody id="attendanceTable"></tbody>
+    </table>
+  </div>  <script>
+    const employees = new Set();
+    const attendance = [];
+
+    function registerEmployee() {
+      const name = document.getElementById("newEmployee").value.trim();
+      const status = document.getElementById("registerStatus");
+      if (!name) {
+        status.innerText = "يرجى إدخال اسم الموظف.";
+        return;
+      }
+      employees.add(name);
+      status.innerText = `تمت إضافة ${name} بنجاح.`;
+      document.getElementById("newEmployee").value = "";
+    }
+
+    async function authenticateFingerprint() {
+      const name = document.getElementById("employeeName").value.trim();
+      const status = document.getElementById("status");
+
+      if (!name || !employees.has(name)) {
+        status.innerText = "الموظف غير مسجل أو الاسم غير مدخل.";
+        return;
+      }
+
+      if (!window.PublicKeyCredential) {
+        status.innerText = "متصفحك لا يدعم التحقق بالبصمة.";
+        return;
+      }
+
+      try {
+        await navigator.credentials.get({
+          publicKey: {
+            challenge: new Uint8Array(32),
+            timeout: 60000,
+            userVerification: "required"
+          }
+        });
+
+        const now = new Date().toLocaleTimeString();
+        attendance.push({ name, time: now });
+        updateAttendanceTable();
+        status.innerText = "تم تسجيل الحضور بنجاح!";
+        document.getElementById("employeeName").value = "";
+      } catch (error) {
+        status.innerText = "فشل في تسجيل البصمة: " + error.message;
+      }
+    }
+
+    function updateAttendanceTable() {
+      const table = document.getElementById("attendanceTable");
+      table.innerHTML = "";
+      attendance.forEach(entry => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${entry.name}</td><td>${entry.time}</td>`;
+        table.appendChild(row);
+      });
+    }
+  </script></body>
+</html>
